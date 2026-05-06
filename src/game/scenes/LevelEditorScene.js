@@ -77,17 +77,17 @@ const FIELD_CONFIG = {
   platform: [
     ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"]
   ],
-  coin: [["x", "number"], ["y", "number"], ["rotation", "number"]],
+  coin: [["x", "number"], ["y", "number"]],
   hazard: [["x", "number"], ["y", "number"], ["rotation", "number"]],
-  enemy: [["x", "number"], ["y", "number"], ["min", "number"], ["max", "number"], ["rotation", "number"]],
+  enemy: [["x", "number"], ["y", "number"], ["min", "number"], ["max", "number"]],
   challenge: [
-    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"], ["label", "text"], ["difficulty", "select"]
+    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["label", "text"], ["difficulty", "select"]
   ],
   merchant: [
-    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"], ["npcX", "number"], ["npcY", "number"]
+    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["npcX", "number"], ["npcY", "number"]
   ],
-  exitGate: [["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"]],
-  playerSpawn: [["x", "number"], ["y", "number"], ["rotation", "number"]],
+  exitGate: [["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"]],
+  playerSpawn: [["x", "number"], ["y", "number"]],
   sign: [["x", "number"], ["y", "number"], ["rotation", "number"], ["text", "text"]]
 };
 
@@ -924,7 +924,7 @@ export class LevelEditorScene extends Phaser.Scene {
     const size = this.objectSize(obj.type, obj.data);
     const center = this.objectCenter(obj.type, obj.data);
     obj.visual.setPosition(center.x, center.y);
-    obj.visual.setAngle(Number(obj.data.rotation) || 0);
+    obj.visual.setAngle(this.canRotateObject(obj) ? Number(obj.data.rotation) || 0 : 0);
     if (obj.visual.setSize && obj.data.width && obj.data.height) {
       obj.visual.setSize(size.width, size.height);
       obj.visual.setDisplaySize(size.width, size.height);
@@ -996,7 +996,7 @@ export class LevelEditorScene extends Phaser.Scene {
     const size = this.objectSize(type, data);
     const center = this.objectCenter(type, data);
     preview.setPosition(center.x, center.y);
-    preview.setAngle(Number(data.rotation) || 0);
+    preview.setAngle(this.canRotateType(type) ? Number(data.rotation) || 0 : 0);
     if (preview.setSize) {
       preview.setSize(size.width, size.height);
       preview.setDisplaySize(size.width, size.height);
@@ -1114,7 +1114,7 @@ export class LevelEditorScene extends Phaser.Scene {
     if (!obj) return [];
     const size = this.objectSize(obj.type, obj.data);
     const center = this.objectCenter(obj.type, obj.data);
-    const angle = Phaser.Math.DegToRad(Number(obj.data.rotation) || 0);
+    const angle = Phaser.Math.DegToRad(this.canRotateObject(obj) ? Number(obj.data.rotation) || 0 : 0);
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
     const points = [
@@ -1414,7 +1414,7 @@ export class LevelEditorScene extends Phaser.Scene {
   }
 
   handleKeyboardRotate() {
-    if (!this.selected || this.selection.length === 0 || this.keys.ctrl.isDown) return false;
+    if (!this.canRotateSelection() || this.keys.ctrl.isDown) return false;
     const direction =
       Phaser.Input.Keyboard.JustDown(this.keys.q) ? -1 :
       Phaser.Input.Keyboard.JustDown(this.keys.e) ? 1 :
@@ -1428,6 +1428,7 @@ export class LevelEditorScene extends Phaser.Scene {
 
   rotateSelectionBy(delta) {
     this.selection.forEach((obj) => {
+      if (!this.canRotateObject(obj)) return;
       obj.data.rotation = this.normalizeRotation((Number(obj.data.rotation) || 0) + delta);
       this.syncVisual(obj);
     });
@@ -1438,6 +1439,18 @@ export class LevelEditorScene extends Phaser.Scene {
 
   canResizeObject(obj) {
     return Boolean(obj) && !["coin", "hazard", "enemy", "playerSpawn"].includes(obj.type);
+  }
+
+  canRotateObject(obj) {
+    return Boolean(obj) && this.canRotateType(obj.type);
+  }
+
+  canRotateType(type) {
+    return ["platform", "hazard", "sign"].includes(type);
+  }
+
+  canRotateSelection() {
+    return this.selection.length > 0 && this.selection.every((obj) => this.canRotateObject(obj));
   }
 
   findTransformHandleAt(x, y) {
@@ -1525,6 +1538,7 @@ export class LevelEditorScene extends Phaser.Scene {
   }
 
   startRotation(_handle, point) {
+    if (!this.canRotateSelection()) return;
     const center = this.objectCenter(this.selected.type, this.selected.data);
     this.rotating = {
       objects: this.selection,
@@ -1547,6 +1561,7 @@ export class LevelEditorScene extends Phaser.Scene {
     }
 
     this.rotating.startRotations.forEach(({ obj, rotation }) => {
+      if (!this.canRotateObject(obj)) return;
       obj.data.rotation = this.normalizeRotation(rotation + delta);
       this.syncVisual(obj);
     });
@@ -1638,7 +1653,7 @@ export class LevelEditorScene extends Phaser.Scene {
       }
     }
 
-    if (this.selection.length === 1) {
+    if (this.selection.length === 1 && this.canRotateObject(this.selected)) {
       const rotateHandle = this.rotationHandleForObject(this.selected, zoom);
       const handleRadius = Math.max(5 / zoom, 7 / zoom);
       const hitSize = Math.max(18 / zoom, handleRadius * 2);

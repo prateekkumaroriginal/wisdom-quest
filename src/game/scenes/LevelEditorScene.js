@@ -75,20 +75,20 @@ const HISTORY_LIMIT = 100;
 
 const FIELD_CONFIG = {
   platform: [
-    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"]
+    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"]
   ],
-  coin: [["x", "number"], ["y", "number"]],
-  hazard: [["x", "number"], ["y", "number"]],
-  enemy: [["x", "number"], ["y", "number"], ["min", "number"], ["max", "number"]],
+  coin: [["x", "number"], ["y", "number"], ["rotation", "number"]],
+  hazard: [["x", "number"], ["y", "number"], ["rotation", "number"]],
+  enemy: [["x", "number"], ["y", "number"], ["min", "number"], ["max", "number"], ["rotation", "number"]],
   challenge: [
-    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["label", "text"], ["difficulty", "select"]
+    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"], ["label", "text"], ["difficulty", "select"]
   ],
   merchant: [
-    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["npcX", "number"], ["npcY", "number"]
+    ["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"], ["npcX", "number"], ["npcY", "number"]
   ],
-  exitGate: [["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"]],
-  playerSpawn: [["x", "number"], ["y", "number"]],
-  sign: [["x", "number"], ["y", "number"], ["text", "text"]]
+  exitGate: [["x", "number"], ["y", "number"], ["width", "number"], ["height", "number"], ["rotation", "number"]],
+  playerSpawn: [["x", "number"], ["y", "number"], ["rotation", "number"]],
+  sign: [["x", "number"], ["y", "number"], ["rotation", "number"], ["text", "text"]]
 };
 
 export class LevelEditorScene extends Phaser.Scene {
@@ -103,6 +103,7 @@ export class LevelEditorScene extends Phaser.Scene {
     this.selection = [];
     this.dragging = null;
     this.resizing = null;
+    this.rotating = null;
     this.cameraDrag = null;
     this.areaSelection = null;
     this.hoveredObject = null;
@@ -180,6 +181,8 @@ export class LevelEditorScene extends Phaser.Scene {
       z: Phaser.Input.Keyboard.KeyCodes.Z,
       y: Phaser.Input.Keyboard.KeyCodes.Y,
       i: Phaser.Input.Keyboard.KeyCodes.I,
+      q: Phaser.Input.Keyboard.KeyCodes.Q,
+      e: Phaser.Input.Keyboard.KeyCodes.E,
       esc: Phaser.Input.Keyboard.KeyCodes.ESC
     });
     this.input.keyboard.addCapture([
@@ -402,6 +405,9 @@ export class LevelEditorScene extends Phaser.Scene {
     if (this.handleKeyboardNudge(time)) {
       return;
     }
+    if (this.handleKeyboardRotate()) {
+      return;
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.i) && this.keys.ctrl.isDown) {
       this.toggleHud();
@@ -617,7 +623,7 @@ export class LevelEditorScene extends Phaser.Scene {
       return;
     }
 
-    if (this.areaSelection || this.dragging || this.resizing || this.cameraDrag) {
+    if (this.areaSelection || this.dragging || this.resizing || this.rotating || this.cameraDrag) {
       this.cancelPointerInteraction();
     }
 
@@ -626,9 +632,13 @@ export class LevelEditorScene extends Phaser.Scene {
     this.cursorWorldPoint = worldPoint;
     this.updateCursorCoordinates();
 
-    const resizeHandle = this.findResizeHandleAt(worldPoint.x, worldPoint.y);
-    if (resizeHandle) {
-      this.startResize(resizeHandle, worldPoint, pointer);
+    const transformHandle = this.findTransformHandleAt(worldPoint.x, worldPoint.y);
+    if (transformHandle?.type === "rotate") {
+      this.startRotation(transformHandle, worldPoint);
+      return;
+    }
+    if (transformHandle) {
+      this.startResize(transformHandle, worldPoint, pointer);
       return;
     }
 
@@ -680,7 +690,7 @@ export class LevelEditorScene extends Phaser.Scene {
       this.updateCursorCoordinates();
       this.setHoveredObject(null);
       this.updatePlacementPreview(null);
-      if (!pointer.isDown && (this.areaSelection || this.dragging || this.resizing || this.cameraDrag)) {
+      if (!pointer.isDown && (this.areaSelection || this.dragging || this.resizing || this.rotating || this.cameraDrag)) {
         this.cancelPointerInteraction();
       }
       return;
@@ -697,6 +707,12 @@ export class LevelEditorScene extends Phaser.Scene {
     if (this.resizing) {
       this.updatePlacementPreview(null);
       this.updateResize(worldPoint, pointer);
+      return;
+    }
+
+    if (this.rotating) {
+      this.updatePlacementPreview(null);
+      this.updateRotation(worldPoint, pointer);
       return;
     }
 
@@ -737,9 +753,11 @@ export class LevelEditorScene extends Phaser.Scene {
   onPointerUp() {
     const draggedObjects = this.dragging?.objects.map(({ obj }) => obj) || [];
     const resizedObject = this.resizing?.obj || null;
+    const rotatedObjects = this.rotating?.objects || [];
     this.finishAreaSelection();
     this.dragging = null;
     this.resizing = null;
+    this.rotating = null;
     this.cameraDrag = null;
     this.input.setDefaultCursor("default");
     if (resizedObject) {
@@ -749,6 +767,13 @@ export class LevelEditorScene extends Phaser.Scene {
       this.updateSelectionOverlay();
       this.redrawWorldChrome();
       this.resizeWorldViewport();
+      this.refreshInspectorValues();
+      this.markDirty();
+      this.discardUnchangedHistoryEntry();
+      return;
+    }
+    if (rotatedObjects.length > 0) {
+      this.updateSelectionOverlay();
       this.refreshInspectorValues();
       this.markDirty();
       this.discardUnchangedHistoryEntry();
@@ -776,6 +801,7 @@ export class LevelEditorScene extends Phaser.Scene {
     }
     this.dragging = null;
     this.resizing = null;
+    this.rotating = null;
     this.cameraDrag = null;
     this.input.setDefaultCursor("default");
   }
@@ -898,6 +924,7 @@ export class LevelEditorScene extends Phaser.Scene {
     const size = this.objectSize(obj.type, obj.data);
     const center = this.objectCenter(obj.type, obj.data);
     obj.visual.setPosition(center.x, center.y);
+    obj.visual.setAngle(Number(obj.data.rotation) || 0);
     if (obj.visual.setSize && obj.data.width && obj.data.height) {
       obj.visual.setSize(size.width, size.height);
       obj.visual.setDisplaySize(size.width, size.height);
@@ -969,6 +996,7 @@ export class LevelEditorScene extends Phaser.Scene {
     const size = this.objectSize(type, data);
     const center = this.objectCenter(type, data);
     preview.setPosition(center.x, center.y);
+    preview.setAngle(Number(data.rotation) || 0);
     if (preview.setSize) {
       preview.setSize(size.width, size.height);
       preview.setDisplaySize(size.width, size.height);
@@ -1082,6 +1110,80 @@ export class LevelEditorScene extends Phaser.Scene {
     }, null);
   }
 
+  rotatedObjectPoints(obj) {
+    if (!obj) return [];
+    const size = this.objectSize(obj.type, obj.data);
+    const center = this.objectCenter(obj.type, obj.data);
+    const angle = Phaser.Math.DegToRad(Number(obj.data.rotation) || 0);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const points = [
+      { x: -size.width / 2, y: -size.height / 2 },
+      { x: size.width / 2, y: -size.height / 2 },
+      { x: size.width / 2, y: size.height / 2 },
+      { x: -size.width / 2, y: size.height / 2 }
+    ];
+
+    return points.map((point) => ({
+      x: center.x + point.x * cos - point.y * sin,
+      y: center.y + point.x * sin + point.y * cos
+    }));
+  }
+
+  rotatedObjectBounds(obj) {
+    const points = this.rotatedObjectPoints(obj);
+    if (!points.length) return null;
+    return {
+      left: Math.min(...points.map((point) => point.x)),
+      right: Math.max(...points.map((point) => point.x)),
+      top: Math.min(...points.map((point) => point.y)),
+      bottom: Math.max(...points.map((point) => point.y))
+    };
+  }
+
+  strokePointLoop(graphics, points) {
+    if (points.length < 2) return;
+    points.forEach((point, index) => {
+      const next = points[(index + 1) % points.length];
+      graphics.strokeLineShape(new Phaser.Geom.Line(point.x, point.y, next.x, next.y));
+    });
+  }
+
+  rotatedResizeHandles(obj) {
+    const [nw, ne, se, sw] = this.rotatedObjectPoints(obj);
+    if (!nw || !ne || !se || !sw) return [];
+    const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    return [
+      { id: "nw", cursor: "nwse-resize", ...nw },
+      { id: "n", cursor: "ns-resize", ...midpoint(nw, ne) },
+      { id: "ne", cursor: "nesw-resize", ...ne },
+      { id: "e", cursor: "ew-resize", ...midpoint(ne, se) },
+      { id: "se", cursor: "nwse-resize", ...se },
+      { id: "s", cursor: "ns-resize", ...midpoint(sw, se) },
+      { id: "sw", cursor: "nesw-resize", ...sw },
+      { id: "w", cursor: "ew-resize", ...midpoint(nw, sw) }
+    ];
+  }
+
+  rotationHandleForObject(obj, zoom = 1) {
+    const [nw, ne] = this.rotatedObjectPoints(obj);
+    const center = this.objectCenter(obj.type, obj.data);
+    const anchor = {
+      x: (nw.x + ne.x) / 2,
+      y: (nw.y + ne.y) / 2
+    };
+    const length = Math.max(26 / zoom, 34 / zoom);
+    const dx = anchor.x - center.x;
+    const dy = anchor.y - center.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    return {
+      id: "rotate",
+      anchor,
+      x: anchor.x + (dx / distance) * length,
+      y: anchor.y + (dy / distance) * length
+    };
+  }
+
   expandWorldToIncludeObjects(objects) {
     const bounds = this.unionObjectBounds(objects);
     if (!bounds) return false;
@@ -1141,11 +1243,43 @@ export class LevelEditorScene extends Phaser.Scene {
   findObjectAt(x, y) {
     for (let i = this.objects.length - 1; i >= 0; i -= 1) {
       const obj = this.objects[i];
-      if (Phaser.Geom.Rectangle.Contains(obj.visual.getBounds(), x, y)) {
+      if (this.containsObjectPoint(obj, x, y)) {
         return obj;
       }
     }
     return null;
+  }
+
+  containsObjectPoint(obj, x, y) {
+    if (!obj) return false;
+    if (obj.type === "coin") {
+      const center = this.objectCenter(obj.type, obj.data);
+      const size = this.objectSize(obj.type, obj.data);
+      return Phaser.Math.Distance.Between(center.x, center.y, x, y) <= size.width / 2;
+    }
+
+    const points = obj.type === "hazard"
+      ? this.rotatedHazardPoints(obj)
+      : this.rotatedObjectPoints(obj);
+    return Phaser.Geom.Polygon.Contains(new Phaser.Geom.Polygon(points), x, y);
+  }
+
+  rotatedHazardPoints(obj) {
+    const size = this.objectSize(obj.type, obj.data);
+    const center = this.objectCenter(obj.type, obj.data);
+    const angle = Phaser.Math.DegToRad(Number(obj.data.rotation) || 0);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const localPoints = [
+      { x: -size.width / 2, y: size.height / 2 },
+      { x: 0, y: -size.height / 2 },
+      { x: size.width / 2, y: size.height / 2 }
+    ];
+
+    return localPoints.map((point) => ({
+      x: center.x + point.x * cos - point.y * sin,
+      y: center.y + point.x * sin + point.y * cos
+    }));
   }
 
   startAreaSelection(x, y) {
@@ -1279,12 +1413,35 @@ export class LevelEditorScene extends Phaser.Scene {
     this.markDirty();
   }
 
+  handleKeyboardRotate() {
+    if (!this.selected || this.selection.length === 0 || this.keys.ctrl.isDown) return false;
+    const direction =
+      Phaser.Input.Keyboard.JustDown(this.keys.q) ? -1 :
+      Phaser.Input.Keyboard.JustDown(this.keys.e) ? 1 :
+      0;
+    if (!direction) return false;
+
+    this.recordHistory();
+    this.rotateSelectionBy(direction);
+    return true;
+  }
+
+  rotateSelectionBy(delta) {
+    this.selection.forEach((obj) => {
+      obj.data.rotation = this.normalizeRotation((Number(obj.data.rotation) || 0) + delta);
+      this.syncVisual(obj);
+    });
+    this.updateSelectionOverlay();
+    this.refreshInspectorValues();
+    this.markDirty();
+  }
+
   canResizeObject(obj) {
     return Boolean(obj) && !["coin", "hazard", "enemy", "playerSpawn"].includes(obj.type);
   }
 
-  findResizeHandleAt(x, y) {
-    if (!this.selectionOverlay?.handles?.length || this.selection.length !== 1 || !this.canResizeObject(this.selected)) {
+  findTransformHandleAt(x, y) {
+    if (!this.selectionOverlay?.handles?.length || this.selection.length !== 1) {
       return null;
     }
 
@@ -1293,8 +1450,13 @@ export class LevelEditorScene extends Phaser.Scene {
     }) || null;
   }
 
+  findResizeHandleAt(x, y) {
+    const handle = this.findTransformHandleAt(x, y);
+    return handle?.type === "rotate" ? null : handle;
+  }
+
   updateResizeCursor(x, y) {
-    const handle = this.findResizeHandleAt(x, y);
+    const handle = this.findTransformHandleAt(x, y);
     this.input.setDefaultCursor(handle ? handle.cursor : "default");
   }
 
@@ -1362,6 +1524,41 @@ export class LevelEditorScene extends Phaser.Scene {
     this.markDirty();
   }
 
+  startRotation(_handle, point) {
+    const center = this.objectCenter(this.selected.type, this.selected.data);
+    this.rotating = {
+      objects: this.selection,
+      center,
+      startPointerAngle: Phaser.Math.RadToDeg(Math.atan2(point.y - center.y, point.x - center.x)),
+      startRotations: this.selection.map((obj) => ({ obj, rotation: Number(obj.data.rotation) || 0 })),
+      historyRecorded: false
+    };
+    this.input.setDefaultCursor("grabbing");
+  }
+
+  updateRotation(point, pointer) {
+    const currentAngle = Phaser.Math.RadToDeg(Math.atan2(point.y - this.rotating.center.y, point.x - this.rotating.center.x));
+    const rawDelta = this.shortestAngleDelta(currentAngle, this.rotating.startPointerAngle);
+    const delta = Math.round(rawDelta);
+    if (delta === 0) return;
+    if (!this.rotating.historyRecorded) {
+      this.recordHistory();
+      this.rotating.historyRecorded = true;
+    }
+
+    this.rotating.startRotations.forEach(({ obj, rotation }) => {
+      obj.data.rotation = this.normalizeRotation(rotation + delta);
+      this.syncVisual(obj);
+    });
+    this.updateSelectionOverlay();
+    this.refreshInspectorValues();
+    this.markDirty();
+  }
+
+  shortestAngleDelta(current, start) {
+    return ((current - start + 540) % 360) - 180;
+  }
+
   selectObject(obj) {
     this.selectObjects([obj], obj);
   }
@@ -1401,7 +1598,9 @@ export class LevelEditorScene extends Phaser.Scene {
       return;
     }
 
-    const bounds = this.unionObjectBounds(this.selection);
+    const bounds = this.selection.length === 1
+      ? this.rotatedObjectBounds(this.selected)
+      : this.unionObjectBounds(this.selection);
     if (!bounds) {
       label.setVisible(false);
       return;
@@ -1414,22 +1613,18 @@ export class LevelEditorScene extends Phaser.Scene {
     const zoom = this.cameras.main.zoom;
 
     graphics.lineStyle(Math.max(1 / zoom, 2 / zoom), 0xf4e786, 1);
-    graphics.strokeRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
+    if (this.selection.length === 1) {
+      const outline = this.rotatedObjectPoints(this.selected);
+      this.strokePointLoop(graphics, outline);
+    } else {
+      graphics.strokeRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
+    }
 
     if (this.selection.length === 1 && this.canResizeObject(this.selected)) {
       const handleSize = Math.max(6 / zoom, 8 / zoom);
       const handleOffset = handleSize / 2;
       const hitSize = Math.max(14 / zoom, handleSize);
-      const handlePoints = [
-        { id: "nw", cursor: "nwse-resize", x: bounds.left, y: bounds.top },
-        { id: "n", cursor: "ns-resize", x: bounds.left + (bounds.right - bounds.left) / 2, y: bounds.top },
-        { id: "ne", cursor: "nesw-resize", x: bounds.right, y: bounds.top },
-        { id: "e", cursor: "ew-resize", x: bounds.right, y: bounds.top + (bounds.bottom - bounds.top) / 2 },
-        { id: "se", cursor: "nwse-resize", x: bounds.right, y: bounds.bottom },
-        { id: "s", cursor: "ns-resize", x: bounds.left + (bounds.right - bounds.left) / 2, y: bounds.bottom },
-        { id: "sw", cursor: "nesw-resize", x: bounds.left, y: bounds.bottom },
-        { id: "w", cursor: "ew-resize", x: bounds.left, y: bounds.top + (bounds.bottom - bounds.top) / 2 }
-      ];
+      const handlePoints = this.rotatedResizeHandles(this.selected);
 
       graphics.lineStyle(Math.max(1 / zoom, 1 / zoom), 0x07100f, 1);
       for (const handle of handlePoints) {
@@ -1441,6 +1636,24 @@ export class LevelEditorScene extends Phaser.Scene {
           hitArea: new Phaser.Geom.Rectangle(handle.x - hitSize / 2, handle.y - hitSize / 2, hitSize, hitSize)
         });
       }
+    }
+
+    if (this.selection.length === 1) {
+      const rotateHandle = this.rotationHandleForObject(this.selected, zoom);
+      const handleRadius = Math.max(5 / zoom, 7 / zoom);
+      const hitSize = Math.max(18 / zoom, handleRadius * 2);
+      graphics.lineStyle(Math.max(1 / zoom, 1.5 / zoom), 0xf4e786, 0.9);
+      graphics.strokeLineShape(new Phaser.Geom.Line(rotateHandle.anchor.x, rotateHandle.anchor.y, rotateHandle.x, rotateHandle.y));
+      graphics.fillStyle(0x07100f, 1);
+      graphics.fillCircle(rotateHandle.x, rotateHandle.y, handleRadius);
+      graphics.lineStyle(Math.max(1 / zoom, 2 / zoom), 0xf4e786, 1);
+      graphics.strokeCircle(rotateHandle.x, rotateHandle.y, handleRadius);
+      this.selectionOverlay.handles.push({
+        ...rotateHandle,
+        type: "rotate",
+        cursor: "grab",
+        hitArea: new Phaser.Geom.Rectangle(rotateHandle.x - hitSize / 2, rotateHandle.y - hitSize / 2, hitSize, hitSize)
+      });
     }
 
     label.setText(`${width} x ${height}`);
@@ -1530,11 +1743,16 @@ export class LevelEditorScene extends Phaser.Scene {
   updateSelectedField(key, value, type) {
     if (!this.selected) return;
     this.beginDomEditHistory();
-    this.selected.data[key] = type === "number" ? Number(value) || 0 : value;
+    const nextValue = type === "number" ? Number(value) || 0 : value;
+    this.selected.data[key] = key === "rotation" ? this.normalizeRotation(nextValue) : nextValue;
     this.clampDataToEditableArea(this.selected.type, this.selected.data);
     this.syncVisual(this.selected);
     this.updateSelectionOverlay();
     this.markDirty();
+  }
+
+  normalizeRotation(value) {
+    return Math.round((((Number(value) || 0) % 360) + 360) % 360);
   }
 
   refreshInspectorValues() {

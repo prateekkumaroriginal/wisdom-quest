@@ -184,6 +184,10 @@ function installWindowModeHandlers() {
     });
     return { borderless: isBorderless };
   });
+
+  ipcMain.handle("edgecase:quit-game", async () => {
+    app.quit();
+  });
 }
 
 installWindowModeHandlers();

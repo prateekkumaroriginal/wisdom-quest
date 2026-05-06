@@ -165,6 +165,14 @@ export default function App() {
     }
   };
 
+  const quitGame = () => {
+    if (window.edgecase?.quitGame) {
+      window.edgecase.quitGame();
+      return;
+    }
+    window.close();
+  };
+
   const handlePauseAction = (action) => {
     emitGameEvent("edgecase:pause-action", { action });
     if (action === "resume") {
@@ -198,6 +206,7 @@ export default function App() {
           onPlay={() => setScreen("level-select")}
           onSettings={() => setScreen("settings")}
           onLevelMaker={() => startScene("LevelEditorScene")}
+          onQuit={quitGame}
         />
       ) : null}
       {screen === "level-select" ? (

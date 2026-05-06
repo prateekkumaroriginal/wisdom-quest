@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Hammer, Play, Settings } from "lucide-react";
+import { Hammer, Play, Power, Settings } from "lucide-react";
 import { useFocusSound } from "./useFocusSound.js";
 
 const IS_DEV = import.meta.env.DEV || Boolean(window.edgecase?.isDev);
@@ -8,7 +8,7 @@ function cx(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-export function MenuScreen({ onPlay, onSettings, onLevelMaker }) {
+export function MenuScreen({ onPlay, onSettings, onLevelMaker, onQuit }) {
   const screenRef = useRef(null);
   const [focusedRow, setFocusedRow] = useState(null);
   useFocusSound(focusedRow);
@@ -37,8 +37,15 @@ export function MenuScreen({ onPlay, onSettings, onLevelMaker }) {
       });
     }
 
+    items.push({
+      label: "QUIT GAME",
+      detail: "Close Wisdom Quest",
+      icon: Power,
+      action: onQuit
+    });
+
     return items;
-  }, [onLevelMaker, onPlay, onSettings]);
+  }, [onLevelMaker, onPlay, onQuit, onSettings]);
 
   const selectFocused = useCallback(() => {
     if (focusedRow === null) {

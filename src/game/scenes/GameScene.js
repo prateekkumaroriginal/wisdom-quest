@@ -185,11 +185,11 @@ export class GameScene extends Phaser.Scene {
 
     this.platforms = this.physics.add.staticGroup();
     for (const platform of this.level.platforms || []) {
-      this.addPlatform(platform.x, platform.y, platform.width, platform.height);
+      this.addPlatform(platform);
     }
 
     for (const sign of this.level.signs || []) {
-      this.add.text(sign.x, sign.y, sign.text, this.signStyle()).setDepth(3);
+      this.add.text(sign.x, sign.y, sign.text, this.signStyle()).setAngle(Number(sign.rotation) || 0).setDepth(3);
     }
   }
 
@@ -232,6 +232,7 @@ export class GameScene extends Phaser.Scene {
     for (const item of this.level.coins || []) {
       const center = this.centerFromTopLeft("coin", item);
       const coin = this.coinGroup.create(center.x, center.y, "coin");
+      coin.setAngle(Number(item.rotation) || 0);
       coin.body.setCircle(12);
       coin.setData("value", 1);
     }
@@ -246,6 +247,7 @@ export class GameScene extends Phaser.Scene {
     for (const hazard of spikes) {
       const center = this.centerFromTopLeft("hazard", hazard);
       const spike = this.hazards.create(center.x, center.y, "spike");
+      spike.setAngle(Number(hazard.rotation) || 0);
       spike.refreshBody();
     }
 
@@ -255,6 +257,7 @@ export class GameScene extends Phaser.Scene {
     for (const patrol of patrols.slice(0, this.difficulty === "easy" ? 1 : 3)) {
       const center = this.centerFromTopLeft("enemy", patrol);
       const enemy = this.enemies.create(center.x, center.y, "enemy");
+      enemy.setAngle(Number(patrol.rotation) || 0);
       enemy.setData("min", patrol.min);
       enemy.setData("max", patrol.max);
       enemy.setVelocityX(this.tuning.enemySpeed);
@@ -277,6 +280,7 @@ export class GameScene extends Phaser.Scene {
       const size = this.itemSize("challenge", pos);
       const zone = this.add
         .rectangle(center.x, center.y, size.width, size.height, 0x2d7f6d, 0.22)
+        .setAngle(Number(pos.rotation) || 0)
         .setStrokeStyle(3, 0xd8cd6c, 0.85);
       this.physics.add.existing(zone, true);
       zone.setData("id", index);
@@ -300,6 +304,7 @@ export class GameScene extends Phaser.Scene {
     const center = this.centerFromTopLeft("merchant", merchant);
     const size = this.itemSize("merchant", merchant);
     this.merchantZone = this.add.rectangle(center.x, center.y, size.width, size.height, 0x345347, 0.25).setStrokeStyle(3, 0xe7d66b);
+    this.merchantZone.setAngle(Number(merchant.rotation) || 0);
     this.physics.add.existing(this.merchantZone, true);
     this.physics.add.overlap(this.player, this.merchantZone, () => {
       this.nearMerchant = true;
@@ -321,6 +326,7 @@ export class GameScene extends Phaser.Scene {
     const center = this.centerFromTopLeft("exitGate", gate);
     const size = this.itemSize("exitGate", gate);
     this.exitGate = this.add.rectangle(center.x, center.y, size.width, size.height, 0x8a7440, 0.58).setStrokeStyle(4, 0xe7d66b);
+    this.exitGate.setAngle(Number(gate.rotation) || 0);
     this.physics.add.existing(this.exitGate, true);
     this.physics.add.overlap(this.player, this.exitGate, () => {
       this.nearExit = true;
@@ -1259,9 +1265,11 @@ export class GameScene extends Phaser.Scene {
     return pool[offset % pool.length];
   }
 
-  addPlatform(x, y, width, height) {
+  addPlatform(data) {
+    const { x, y, width, height } = data;
     const platform = this.platforms.create(x + width / 2, y + height / 2, "platform");
     platform.setDisplaySize(width, height);
+    platform.setAngle(Number(data.rotation) || 0);
     platform.refreshBody();
   }
 

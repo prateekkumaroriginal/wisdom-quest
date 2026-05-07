@@ -185,8 +185,36 @@ function installWindowModeHandlers() {
     return { borderless: isBorderless };
   });
 
-  ipcMain.handle("edgecase:quit-game", async () => {
+  ipcMain.on("edgecase:quit-game", (event) => {
+    console.debug("[edgecase:quit] main received ipc", {
+      hasSender: Boolean(event.sender),
+      windowCount: BrowserWindow.getAllWindows().length,
+      hasMainWindow: Boolean(mainWindow),
+      mainWindowDestroyed: mainWindow ? mainWindow.isDestroyed() : null
+    });
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    console.debug("[edgecase:quit] main sender window", {
+      hasSenderWindow: Boolean(senderWindow),
+      senderWindowDestroyed: senderWindow ? senderWindow.isDestroyed() : null
+    });
+    if (senderWindow && !senderWindow.isDestroyed()) {
+      console.debug("[edgecase:quit] main closing sender window");
+      senderWindow.close();
+    }
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        console.debug("[edgecase:quit] main closing remaining window", { id: win.id });
+        win.close();
+      }
+    }
+    console.debug("[edgecase:quit] main calling app.quit");
     app.quit();
+    setImmediate(() => {
+      console.debug("[edgecase:quit] main forcing app.exit");
+      if (!app.isQuitting) {
+        app.exit(0);
+      }
+    });
   });
 }
 

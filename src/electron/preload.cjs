@@ -13,7 +13,10 @@ contextBridge.exposeInMainWorld("edgecase", {
     console.log("[edgecase:preload] setBorderless", Boolean(enabled));
     return ipcRenderer.invoke("edgecase:set-borderless", Boolean(enabled));
   },
-  quitGame: () => ipcRenderer.invoke("edgecase:quit-game"),
+  quitGame: () => {
+    console.debug("[edgecase:quit] preload sending ipc");
+    ipcRenderer.send("edgecase:quit-game");
+  },
   loadLevels: isDev ? () => ipcRenderer.invoke("edgecase:load-levels") : undefined,
   saveLevel: isDev ? (level) => ipcRenderer.invoke("edgecase:save-level", level) : undefined,
   deleteLevel: isDev ? (id) => ipcRenderer.invoke("edgecase:delete-level", id) : undefined

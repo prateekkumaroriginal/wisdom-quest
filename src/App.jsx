@@ -166,11 +166,19 @@ export default function App() {
   };
 
   const quitGame = () => {
+    console.debug("[edgecase:quit] renderer requested", {
+      hasEdgecase: Boolean(window.edgecase),
+      hasQuitGame: Boolean(window.edgecase?.quitGame),
+      isDev: window.edgecase?.isDev,
+      platform: window.edgecase?.platform
+    });
     if (window.edgecase?.quitGame) {
       window.edgecase.quitGame();
+      console.debug("[edgecase:quit] renderer sent quit request");
       return;
     }
-    window.close();
+    console.debug("[edgecase:quit] renderer missing Electron bridge");
+    window.alert("Quit Game is only available in the desktop app.");
   };
 
   const handlePauseAction = (action) => {

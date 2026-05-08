@@ -1,6 +1,12 @@
 import { Group, Redo2, Trash2, Undo2, Ungroup } from "lucide";
 import { LEVELS } from "../data/levels.js";
 import {
+  getQuestionValidationMessage,
+  isValidQuestion,
+  parseQuestion
+} from "../data/questionSchema.js";
+import { emitGameEvent, gameEvents } from "../gameEvents.js";
+import {
   getEditorCoordinatesVisible,
   getEditorDisplaySettingsOpen,
   getEditorGridVisible,
@@ -164,6 +170,8 @@ export class LevelEditorScene extends Phaser.Scene {
     window.addEventListener("keydown", this.handleHistoryKeyDown, true);
     window.addEventListener("pointerup", this.handleWindowPointerUp);
     window.addEventListener("blur", this.handleWindowPointerCancel);
+    gameEvents.addEventListener("edgecase:question-modal-apply", this.handleQuestionModalApply);
+    gameEvents.addEventListener("edgecase:question-modal-cancel", this.handleQuestionModalCancel);
     this.input.on("wheel", (pointer, _objects, dx, dy, event) => this.onWheel(pointer, dx, dy, event));
 
     this.keys = this.input.keyboard.addKeys({
@@ -589,6 +597,25 @@ export class LevelEditorScene extends Phaser.Scene {
     }
   };
 
+  handleQuestionModalApply = (event) => {
+    if (!this.selected || this.selected.type !== "challenge") return;
+    const parsed = parseQuestion(event.detail?.question);
+    if (!parsed.success) {
+      this.showMessage(parsed.error.issues[0]?.message || "Question is invalid.");
+      return;
+    }
+
+    this.recordHistory();
+    this.selected.data.questionMode = "custom";
+    this.selected.data.question = parsed.data;
+    this.syncVisual(this.selected);
+    this.renderInspector();
+    this.markDirty();
+    this.showMessage("Custom question saved");
+  };
+
+  handleQuestionModalCancel = () => {};
+
   adjustCanvasZoom(delta) {
     this.setCanvasZoom(Phaser.Math.Clamp(
       this.cameras.main.zoom + delta,
@@ -845,7 +872,7 @@ export class LevelEditorScene extends Phaser.Scene {
       if (options.commit !== false) {
         this.nextChallenge += 1;
       }
-      return { type: "challenge", x, y, width: size.width, height: size.height, label: `CHALLENGE ${String(index).padStart(2, "0")}`, difficulty: "easy" };
+      return { type: "challenge", x, y, width: size.width, height: size.height, label: `CHALLENGE ${String(index).padStart(2, "0")}`, difficulty: "easy", questionMode: "auto" };
     }
     if (tool === "merchant") return { type: "merchant", x, y, width: size.width, height: size.height, npcX: x, npcY: y };
     if (tool === "exitGate") return { type: "exitGate", x, y, width: size.width, height: size.height };
@@ -871,6 +898,7 @@ export class LevelEditorScene extends Phaser.Scene {
     for (const obj of this.objects) {
       obj.visual.destroy();
       if (obj.label) obj.label.destroy();
+      if (obj.questionMarker) obj.questionMarker.destroy();
       if (obj.patrol) obj.patrol.destroy();
     }
     this.objects = [];
@@ -915,6 +943,13 @@ export class LevelEditorScene extends Phaser.Scene {
       if (type === "challenge" || type === "sign") {
         obj.label = this.add.text(data.x, data.y - 20, data.label || data.text || type.toUpperCase(), this.smallStyle("#e7d66b")).setDepth(11);
       }
+      if (type === "challenge") {
+        obj.questionMarker = this.add.text(0, 0, "Q", {
+          ...this.smallStyle("#07100f"),
+          backgroundColor: "#e7d66b",
+          padding: { x: 5, y: 2 }
+        }).setDepth(12);
+      }
       this.objects.push(obj);
       this.syncVisual(obj);
     }
@@ -932,6 +967,15 @@ export class LevelEditorScene extends Phaser.Scene {
     if (obj.label) {
       obj.label.setPosition(obj.data.x, obj.data.y - 20);
       obj.label.setText(obj.data.label || obj.data.text || obj.type.toUpperCase());
+    }
+    if (obj.questionMarker) {
+      const showMarker = this.challengeHasCustomQuestionMarker(obj.data);
+      obj.questionMarker.setVisible(showMarker);
+      obj.questionMarker.setPosition(obj.data.x + size.width - 26, obj.data.y + 8);
+      obj.questionMarker.setStyle({
+        color: "#07100f",
+        backgroundColor: isValidQuestion(obj.data.question) ? "#e7d66b" : "#f07b6e"
+      });
     }
     if (obj.patrol) {
       obj.patrol.destroy();
@@ -1721,6 +1765,7 @@ export class LevelEditorScene extends Phaser.Scene {
       <div class="mt-4 flex flex-col gap-3">
         ${fields.map(([key, type]) => this.fieldMarkup(key, type, this.selected.data[key])).join("")}
       </div>
+      ${this.selected.type === "challenge" ? this.challengeQuestionMarkup(this.selected.data) : ""}
       <div class="mt-5 grid grid-cols-1 gap-2">
         ${this.canDuplicateSelected() ? `<button data-action="duplicate" class="rounded-sm border border-[#b9a44c] bg-[#e7d66b] px-2 py-2 text-sm font-bold text-[#07100f] transition-colors hover:border-[#f4e786] hover:bg-[#f4e786]">DUPLICATE</button>` : ""}
       </div>
@@ -1731,8 +1776,87 @@ export class LevelEditorScene extends Phaser.Scene {
       input.addEventListener("blur", () => this.endDomEditHistory());
       input.addEventListener("input", () => this.updateSelectedField(input.dataset.field, input.value, input.dataset.kind));
     });
+    this.inspectorEl.querySelector("[data-question-mode]")?.addEventListener("change", (event) => {
+      this.updateSelectedQuestionMode(event.target.value);
+    });
+    this.inspectorEl.querySelector("[data-action='edit-question']")?.addEventListener("click", () => this.openQuestionModal("form"));
+    this.inspectorEl.querySelector("[data-action='import-question-json']")?.addEventListener("click", () => this.openQuestionModal("json"));
+    this.inspectorEl.querySelector("[data-action='clear-question']")?.addEventListener("click", () => this.clearSelectedQuestion());
     this.inspectorEl.querySelector("[data-action='duplicate']")?.addEventListener("click", () => this.duplicateSelected());
     this.inspectorEl.querySelector("[data-action='delete']")?.addEventListener("click", () => this.deleteSelected());
+  }
+
+  challengeQuestionMarkup(challenge) {
+    const mode = this.questionModeForChallenge(challenge);
+    const parsed = parseQuestion(challenge.question);
+    const summary = parsed.success
+      ? this.escapeHtml(this.truncateText(parsed.data.prompt, 84))
+      : this.escapeHtml(getQuestionValidationMessage(challenge.question) || "No custom question set.");
+
+    return `
+      <section class="mt-5 rounded-sm border border-[#385346] bg-[#0d1a16] p-3">
+        <label class="flex flex-col gap-1 text-xs font-bold text-[#8fa89d]">
+          QUESTION MODE
+          <select data-question-mode class="rounded-sm border border-[#385346] bg-[#102019] px-2 py-2 text-sm text-[#edf8ed] outline-none transition focus:border-[#f4e786]">
+            <option value="auto" ${mode === "auto" ? "selected" : ""}>Auto from difficulty</option>
+            <option value="custom" ${mode === "custom" ? "selected" : ""}>Custom question</option>
+          </select>
+        </label>
+        ${mode === "auto" ? `
+          <div class="mt-3 text-xs leading-5 text-[#8fa89d]">Uses built-in questions for this difficulty.</div>
+        ` : `
+          <div class="mt-3 rounded-sm border ${parsed.success ? "border-[#385346]" : "border-[#7b332d]"} bg-[#06100e] px-3 py-2 text-xs leading-5 ${parsed.success ? "text-[#edf8ed]" : "text-[#f07b6e]"}">${summary}</div>
+          <div class="mt-3 grid grid-cols-1 gap-2">
+            <button data-action="edit-question" type="button" class="rounded-sm border border-[#b9a44c] bg-[#e7d66b] px-2 py-2 text-sm font-bold text-[#07100f] transition-colors hover:border-[#f4e786] hover:bg-[#f4e786]">EDIT QUESTION</button>
+            <button data-action="import-question-json" type="button" class="rounded-sm border border-[#6ad8b4] bg-[#3fa68f] px-2 py-2 text-sm font-bold text-[#07100f] transition-colors hover:border-[#8ee0c6] hover:bg-[#62cba8]">IMPORT JSON</button>
+            <button data-action="clear-question" type="button" class="rounded-sm border border-[#7b332d] bg-[#1f1110] px-2 py-2 text-sm font-bold text-[#f07b6e] transition-colors hover:border-[#f07b6e] hover:bg-[#2c1715]">CLEAR QUESTION</button>
+          </div>
+        `}
+      </section>
+    `;
+  }
+
+  questionModeForChallenge(challenge) {
+    if (challenge.questionMode === "custom" || challenge.questionMode === "auto") {
+      return challenge.questionMode;
+    }
+    return isValidQuestion(challenge.question) ? "custom" : "auto";
+  }
+
+  challengeHasCustomQuestionMarker(challenge) {
+    return challenge.questionMode === "custom" || (!challenge.questionMode && isValidQuestion(challenge.question));
+  }
+
+  updateSelectedQuestionMode(mode) {
+    if (!this.selected || this.selected.type !== "challenge") return;
+    this.recordHistory();
+    this.selected.data.questionMode = mode === "custom" ? "custom" : "auto";
+    this.syncVisual(this.selected);
+    this.renderInspector();
+    this.markDirty();
+  }
+
+  clearSelectedQuestion() {
+    if (!this.selected || this.selected.type !== "challenge") return;
+    this.recordHistory();
+    delete this.selected.data.question;
+    this.selected.data.questionMode = "auto";
+    this.syncVisual(this.selected);
+    this.renderInspector();
+    this.markDirty();
+  }
+
+  openQuestionModal(tab = "form") {
+    if (!this.selected || this.selected.type !== "challenge") return;
+    emitGameEvent("edgecase:question-modal-open", {
+      tab: tab === "json" ? "json" : "form",
+      label: this.selected.data.label || "Selected challenge",
+      question: this.selected.data.question || null
+    });
+  }
+
+  closeQuestionModal() {
+    emitGameEvent("edgecase:question-modal-close");
   }
 
   fieldMarkup(key, type, value) {
@@ -1854,6 +1978,21 @@ export class LevelEditorScene extends Phaser.Scene {
     }[type];
   }
 
+  validateCustomChallengeQuestions() {
+    const challenges = this.draft.challenges || [];
+    for (let index = 0; index < challenges.length; index += 1) {
+      const challenge = challenges[index];
+      if (challenge.questionMode !== "custom") continue;
+      const parsed = parseQuestion(challenge.question);
+      if (!parsed.success) {
+        const label = challenge.label || `Challenge ${String(index + 1).padStart(2, "0")}`;
+        const message = getQuestionValidationMessage(challenge.question) || "Question is invalid.";
+        return `${label}: ${message}`;
+      }
+    }
+    return "";
+  }
+
   async saveLevel() {
     const name = this.draft.name.trim();
     if (!name) {
@@ -1862,6 +2001,11 @@ export class LevelEditorScene extends Phaser.Scene {
     }
     if (!this.draft.playerSpawn || !this.draft.exitGate) {
       this.showMessage("You must have a Spawn and Exit point before saving.");
+      return;
+    }
+    const questionError = this.validateCustomChallengeQuestions();
+    if (questionError) {
+      this.showMessage(questionError);
       return;
     }
     if (!window.edgecase?.saveLevel) {
@@ -1893,6 +2037,11 @@ export class LevelEditorScene extends Phaser.Scene {
   playtest() {
     if (!this.draft.playerSpawn || !this.draft.exitGate) {
       this.showMessage("Add a Spawn and Exit before playtesting.");
+      return;
+    }
+    const questionError = this.validateCustomChallengeQuestions();
+    if (questionError) {
+      this.showMessage(questionError);
       return;
     }
     this.registry.set("editorDraft", structuredClone(this.draft));
@@ -2301,10 +2450,13 @@ export class LevelEditorScene extends Phaser.Scene {
 
   destroyDomHud() {
     window.clearTimeout(this.messageTimer);
+    this.closeQuestionModal();
     this.game?.canvas?.removeEventListener("contextmenu", this.handleCanvasContextMenu);
     window.removeEventListener("keydown", this.handleHistoryKeyDown, true);
     window.removeEventListener("pointerup", this.handleWindowPointerUp);
     window.removeEventListener("blur", this.handleWindowPointerCancel);
+    gameEvents.removeEventListener("edgecase:question-modal-apply", this.handleQuestionModalApply);
+    gameEvents.removeEventListener("edgecase:question-modal-cancel", this.handleQuestionModalCancel);
     this.scale?.off(Phaser.Scale.Events.RESIZE, this.resizeWorldViewport, this);
     this.selectionOverlay?.graphics.destroy();
     this.selectionOverlay?.label.destroy();
@@ -2332,6 +2484,12 @@ export class LevelEditorScene extends Phaser.Scene {
       .join("");
 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${children}</svg>`;
+  }
+
+  truncateText(value, maxLength) {
+    const text = String(value || "");
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
   }
 
   toolClass(active, disabled = false) {

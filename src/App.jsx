@@ -9,6 +9,7 @@ import { LevelSelectScreen } from "./ui/LevelSelectScreen.jsx";
 import { MenuScreen } from "./ui/MenuScreen.jsx";
 import { MerchantScreen } from "./ui/MerchantScreen.jsx";
 import { PauseScreen } from "./ui/PauseScreen.jsx";
+import { QuestionModal } from "./ui/QuestionModal.jsx";
 import { SettingsScreen } from "./ui/SettingsScreen.jsx";
 import { getViewportStyleVars, useViewportMetrics } from "./ui/useViewportMetrics.js";
 
@@ -21,6 +22,7 @@ export default function App() {
   const [endRunState, setEndRunState] = useState(null);
   const [hudState, setHudState] = useState(null);
   const [toastState, setToastState] = useState(null);
+  const [questionModalState, setQuestionModalState] = useState(null);
   const viewportMetrics = useViewportMetrics();
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export default function App() {
       setMerchantState(null);
       setEndRunState(null);
       setToastState(null);
+      setQuestionModalState(null);
       setScreen("settings");
     };
     const openMenu = () => {
@@ -50,6 +53,7 @@ export default function App() {
       setEndRunState(null);
       setHudState(null);
       setToastState(null);
+      setQuestionModalState(null);
       setScreen("menu");
     };
     const openLevelSelect = () => {
@@ -57,6 +61,7 @@ export default function App() {
       setMerchantState(null);
       setEndRunState(null);
       setToastState(null);
+      setQuestionModalState(null);
       setScreen("level-select");
     };
     const openPause = () => {
@@ -72,6 +77,8 @@ export default function App() {
     const updateHud = (event) => setHudState(event.detail);
     const clearHud = () => setHudState(null);
     const showToast = (event) => setToastState({ id: Date.now(), message: event.detail?.message || "" });
+    const openQuestionModal = (event) => setQuestionModalState(event.detail);
+    const closeQuestionModal = () => setQuestionModalState(null);
 
     gameEvents.addEventListener("edgecase:navigate-settings", openSettings);
     gameEvents.addEventListener("edgecase:navigate-menu", openMenu);
@@ -86,6 +93,8 @@ export default function App() {
     gameEvents.addEventListener("edgecase:hud-update", updateHud);
     gameEvents.addEventListener("edgecase:hud-clear", clearHud);
     gameEvents.addEventListener("edgecase:toast", showToast);
+    gameEvents.addEventListener("edgecase:question-modal-open", openQuestionModal);
+    gameEvents.addEventListener("edgecase:question-modal-close", closeQuestionModal);
 
     return () => {
       gameEvents.removeEventListener("edgecase:navigate-settings", openSettings);
@@ -101,18 +110,21 @@ export default function App() {
       gameEvents.removeEventListener("edgecase:hud-update", updateHud);
       gameEvents.removeEventListener("edgecase:hud-clear", clearHud);
       gameEvents.removeEventListener("edgecase:toast", showToast);
+      gameEvents.removeEventListener("edgecase:question-modal-open", openQuestionModal);
+      gameEvents.removeEventListener("edgecase:question-modal-close", closeQuestionModal);
     };
   }, []);
 
   useEffect(() => {
     if (gameRef.current?.input?.keyboard) {
-      gameRef.current.input.keyboard.enabled = screen === "game";
+      gameRef.current.input.keyboard.enabled = screen === "game" && !questionModalState;
     }
-  }, [screen]);
+  }, [screen, questionModalState]);
 
   useEffect(() => {
     if (screen !== "game") {
       setToastState(null);
+      setQuestionModalState(null);
     }
   }, [screen]);
 
@@ -126,6 +138,7 @@ export default function App() {
     setMerchantState(null);
     setEndRunState(null);
     setToastState(null);
+    setQuestionModalState(null);
     setScreen("game");
     gameRef.current?.scene?.start(sceneName);
   };
@@ -140,6 +153,7 @@ export default function App() {
     setMerchantState(null);
     setEndRunState(null);
     setToastState(null);
+    setQuestionModalState(null);
     setScreen("game");
     gameRef.current?.scene?.start("GameScene");
   };
@@ -151,6 +165,7 @@ export default function App() {
     setMerchantState(null);
     setEndRunState(null);
     setToastState(null);
+    setQuestionModalState(null);
     setScreen("game");
     gameRef.current?.scene?.start("LevelEditorScene");
   };
@@ -196,6 +211,16 @@ export default function App() {
     emitGameEvent("edgecase:end-run-action", { action });
   };
 
+  const handleQuestionApply = (question) => {
+    setQuestionModalState(null);
+    emitGameEvent("edgecase:question-modal-apply", { question });
+  };
+
+  const handleQuestionCancel = () => {
+    setQuestionModalState(null);
+    emitGameEvent("edgecase:question-modal-cancel");
+  };
+
   return (
     <div className="app-shell" style={getViewportStyleVars(viewportMetrics)}>
       <div
@@ -209,6 +234,9 @@ export default function App() {
       {merchantState ? <MerchantScreen state={merchantState} onAction={handleMerchantAction} /> : null}
       {endRunState ? <EndRunScreen state={endRunState} onAction={handleEndRunAction} /> : null}
       {pauseVisible ? <PauseScreen onAction={handlePauseAction} /> : null}
+      {questionModalState ? (
+        <QuestionModal state={questionModalState} onApply={handleQuestionApply} onCancel={handleQuestionCancel} />
+      ) : null}
       {screen === "menu" ? (
         <MenuScreen
           onPlay={() => setScreen("level-select")}

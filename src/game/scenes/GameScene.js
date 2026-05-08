@@ -1,4 +1,5 @@
 import { QUESTIONS } from "../data/questions.js";
+import { parseQuestion } from "../data/questionSchema.js";
 import { UPGRADES } from "../data/upgrades.js";
 import { DEFAULT_LEVEL_ID, LEVELS } from "../data/levels.js";
 import { emitGameEvent, gameEvents } from "../gameEvents.js";
@@ -283,7 +284,7 @@ export class GameScene extends Phaser.Scene {
       zone.setData("id", index);
       zone.setData("locked", false);
       zone.setData("completed", false);
-      zone.setData("question", this.pickQuestion(pos.difficulty || questionLevels[index] || "easy", index));
+      zone.setData("question", this.resolveChallengeQuestion(pos, index, questionLevels));
       this.challengeZones.push(zone);
 
       this.add.text(pos.x, pos.y - 28, pos.label || `CHALLENGE ${String(index + 1).padStart(2, "0")}`, this.signStyle()).setDepth(3);
@@ -1258,6 +1259,20 @@ export class GameScene extends Phaser.Scene {
   pickQuestion(difficulty, offset) {
     const pool = QUESTIONS.filter((question) => question.difficulty === difficulty);
     return pool[offset % pool.length];
+  }
+
+  resolveChallengeQuestion(pos, index, questionLevels) {
+    const customQuestion = parseQuestion(pos.question);
+    if (pos.questionMode === "custom") {
+      if (customQuestion.success) {
+        return customQuestion.data;
+      }
+      console.warn("Invalid custom challenge question; falling back to auto.", pos.label);
+    } else if (!pos.questionMode && customQuestion.success) {
+      return customQuestion.data;
+    }
+
+    return this.pickQuestion(pos.difficulty || questionLevels[index] || "easy", index);
   }
 
   addPlatform(data) {

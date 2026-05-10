@@ -1,4 +1,4 @@
-import { Group, Redo2, Trash2, Undo2, Ungroup } from "lucide";
+import { Check, ChevronDown, Group, Redo2, Trash2, Undo2, Ungroup } from "lucide";
 import { LEVELS } from "../data/levels.js";
 import {
   getQuestionValidationMessage,
@@ -218,7 +218,7 @@ export class LevelEditorScene extends Phaser.Scene {
         <div data-snap-modifier class="min-w-20 px-3 text-center text-[#8fa89d]">ALT: SNAP</div>
       </div>
       <div data-cursor-coords class="pointer-events-none absolute bottom-3 left-1/2 min-w-40 -translate-x-1/2 rounded-sm border border-[#385346] bg-[#06100e]/90 px-3 py-2 text-center text-xs font-bold text-[#8fa89d] shadow-[0_8px_24px_rgba(0,0,0,0.3)]">X: ---- Y: ----</div>
-      <aside data-left-panel class="pointer-events-auto absolute left-0 top-0 flex h-full w-[246px] flex-col border-r border-[#385346] bg-[#06100e]/95 p-4 shadow-[18px_0_36px_rgba(0,0,0,0.35)]">
+      <aside data-left-panel class="edgecase-scrollbar pointer-events-auto absolute left-0 top-0 flex h-full w-[246px] flex-col overflow-y-auto border-r border-[#385346] bg-[#06100e]/95 p-4 shadow-[18px_0_36px_rgba(0,0,0,0.35)]">
         <div class="font-[EdgecaseTitle] text-3xl text-[#e7d66b]">LEVEL MAKER</div>
         <div class="mt-2 text-xs text-[#8fa89d]">Ctrl+I hides panels</div>
         <div class="mt-4 grid grid-cols-2 gap-2">
@@ -264,7 +264,7 @@ export class LevelEditorScene extends Phaser.Scene {
       </aside>
       <aside data-right-panel class="pointer-events-auto absolute right-0 top-0 flex h-full w-[245px] flex-col border-l border-[#385346] bg-[#06100e]/95 p-4 shadow-[-18px_0_36px_rgba(0,0,0,0.35)]">
         <div class="font-[EdgecaseTitle] text-3xl text-[#e7d66b]">SELECTED</div>
-        <div data-inspector class="mt-5 min-h-0 flex-1 overflow-y-auto pr-1"></div>
+        <div data-inspector class="edgecase-scrollbar mt-5 min-h-0 flex-1 overflow-y-auto pr-1"></div>
         <div data-message class="mb-3 min-h-10 text-sm text-[#f4e786]"></div>
         <div class="grid grid-cols-2 gap-2">
           <button data-action="exit" class="rounded-sm border border-[#7b332d] bg-[#d65f4f] px-3 py-2 text-sm font-bold text-[#07100f] transition-colors hover:border-[#f07b6e] hover:bg-[#f07b6e]">EXIT</button>
@@ -1776,11 +1776,22 @@ export class LevelEditorScene extends Phaser.Scene {
       input.addEventListener("blur", () => this.endDomEditHistory());
       input.addEventListener("input", () => this.updateSelectedField(input.dataset.field, input.value, input.dataset.kind));
     });
-    this.inspectorEl.querySelector("[data-question-mode]")?.addEventListener("change", (event) => {
-      this.updateSelectedQuestionMode(event.target.value);
+    this.inspectorEl.querySelectorAll("[data-custom-select-trigger]").forEach((trigger) => {
+      trigger.addEventListener("click", () => this.toggleCustomSelect(trigger.closest("[data-custom-select]")));
     });
-    this.inspectorEl.querySelector("[data-action='edit-question']")?.addEventListener("click", () => this.openQuestionModal("form"));
-    this.inspectorEl.querySelector("[data-action='import-question-json']")?.addEventListener("click", () => this.openQuestionModal("json"));
+    this.inspectorEl.querySelectorAll("[data-custom-select-option]").forEach((option) => {
+      option.addEventListener("click", () => {
+        const root = option.closest("[data-custom-select]");
+        const value = option.dataset.value;
+        if (root?.dataset.selectTarget === "question-mode") {
+          this.updateSelectedQuestionMode(value);
+          return;
+        }
+        this.updateSelectedField(root?.dataset.field, value, root?.dataset.kind);
+        this.renderInspector();
+      });
+    });
+    this.inspectorEl.querySelector("[data-action='edit-question']")?.addEventListener("click", () => this.openQuestionModal());
     this.inspectorEl.querySelector("[data-action='clear-question']")?.addEventListener("click", () => this.clearSelectedQuestion());
     this.inspectorEl.querySelector("[data-action='duplicate']")?.addEventListener("click", () => this.duplicateSelected());
     this.inspectorEl.querySelector("[data-action='delete']")?.addEventListener("click", () => this.deleteSelected());
@@ -1797,10 +1808,14 @@ export class LevelEditorScene extends Phaser.Scene {
       <section class="mt-5 rounded-sm border border-[#385346] bg-[#0d1a16] p-3">
         <label class="flex flex-col gap-1 text-xs font-bold text-[#8fa89d]">
           QUESTION MODE
-          <select data-question-mode class="rounded-sm border border-[#385346] bg-[#102019] px-2 py-2 text-sm text-[#edf8ed] outline-none transition focus:border-[#f4e786]">
-            <option value="auto" ${mode === "auto" ? "selected" : ""}>Auto from difficulty</option>
-            <option value="custom" ${mode === "custom" ? "selected" : ""}>Custom question</option>
-          </select>
+          ${this.customSelectMarkup({
+            target: "question-mode",
+            value: mode,
+            options: [
+              ["auto", "Auto from difficulty"],
+              ["custom", "Custom question"]
+            ]
+          })}
         </label>
         ${mode === "auto" ? `
           <div class="mt-3 text-xs leading-5 text-[#8fa89d]">Uses built-in questions for this difficulty.</div>
@@ -1808,7 +1823,6 @@ export class LevelEditorScene extends Phaser.Scene {
           <div class="mt-3 rounded-sm border ${parsed.success ? "border-[#385346]" : "border-[#7b332d]"} bg-[#06100e] px-3 py-2 text-xs leading-5 ${parsed.success ? "text-[#edf8ed]" : "text-[#f07b6e]"}">${summary}</div>
           <div class="mt-3 grid grid-cols-1 gap-2">
             <button data-action="edit-question" type="button" class="rounded-sm border border-[#b9a44c] bg-[#e7d66b] px-2 py-2 text-sm font-bold text-[#07100f] transition-colors hover:border-[#f4e786] hover:bg-[#f4e786]">EDIT QUESTION</button>
-            <button data-action="import-question-json" type="button" class="rounded-sm border border-[#6ad8b4] bg-[#3fa68f] px-2 py-2 text-sm font-bold text-[#07100f] transition-colors hover:border-[#8ee0c6] hover:bg-[#62cba8]">IMPORT JSON</button>
             <button data-action="clear-question" type="button" class="rounded-sm border border-[#7b332d] bg-[#1f1110] px-2 py-2 text-sm font-bold text-[#f07b6e] transition-colors hover:border-[#f07b6e] hover:bg-[#2c1715]">CLEAR QUESTION</button>
           </div>
         `}
@@ -1846,10 +1860,9 @@ export class LevelEditorScene extends Phaser.Scene {
     this.markDirty();
   }
 
-  openQuestionModal(tab = "form") {
+  openQuestionModal() {
     if (!this.selected || this.selected.type !== "challenge") return;
     emitGameEvent("edgecase:question-modal-open", {
-      tab: tab === "json" ? "json" : "form",
       label: this.selected.data.label || "Selected challenge",
       question: this.selected.data.question || null
     });
@@ -1865,9 +1878,12 @@ export class LevelEditorScene extends Phaser.Scene {
       return `
         <label class="flex flex-col gap-1 text-xs font-bold text-[#8fa89d]">
           ${label}
-          <select data-field="${key}" data-kind="${type}" class="rounded-sm border border-[#385346] bg-[#102019] px-2 py-2 text-sm text-[#edf8ed] outline-none transition focus:border-[#f4e786]">
-            ${["easy", "medium", "hard"].map((item) => `<option value="${item}" ${value === item ? "selected" : ""}>${item}</option>`).join("")}
-          </select>
+          ${this.customSelectMarkup({
+            field: key,
+            kind: type,
+            value,
+            options: ["easy", "medium", "hard"].map((item) => [item, item])
+          })}
         </label>
       `;
     }
@@ -1877,6 +1893,46 @@ export class LevelEditorScene extends Phaser.Scene {
         <input data-field="${key}" data-kind="${type}" type="${type === "number" ? "number" : "text"}" value="${value ?? ""}" class="rounded-sm border border-[#385346] bg-[#102019] px-2 py-2 text-sm text-[#edf8ed] outline-none transition focus:border-[#f4e786]" />
       </label>
     `;
+  }
+
+  customSelectMarkup({ target = "", field = "", kind = "", value, options }) {
+    const selected = options.find(([optionValue]) => optionValue === value) || options[0];
+    return `
+      <div data-custom-select data-select-target="${target}" data-field="${field}" data-kind="${kind}" class="edgecase-custom-select">
+        <button data-custom-select-trigger type="button" class="edgecase-custom-select__trigger" aria-haspopup="listbox" aria-expanded="false">
+          <span>${this.escapeHtml(selected?.[1] || "")}</span>
+          ${this.lucideSvg(ChevronDown, 18)}
+        </button>
+        <div data-custom-select-content class="edgecase-custom-select__content" role="listbox">
+          ${options.map(([optionValue, optionLabel]) => `
+            <button
+              data-custom-select-option
+              data-value="${this.escapeHtml(optionValue)}"
+              type="button"
+              role="option"
+              aria-selected="${optionValue === value ? "true" : "false"}"
+              class="edgecase-custom-select__item"
+            >
+              <span>${this.escapeHtml(optionLabel)}</span>
+              ${optionValue === value ? this.lucideSvg(Check, 16) : ""}
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  toggleCustomSelect(root) {
+    if (!root) return;
+    const isOpen = root.hasAttribute("data-open");
+    this.inspectorEl?.querySelectorAll("[data-custom-select]").forEach((select) => {
+      select.removeAttribute("data-open");
+      select.querySelector("[data-custom-select-trigger]")?.setAttribute("aria-expanded", "false");
+    });
+    if (!isOpen) {
+      root.setAttribute("data-open", "");
+      root.querySelector("[data-custom-select-trigger]")?.setAttribute("aria-expanded", "true");
+    }
   }
 
   updateSelectedField(key, value, type) {

@@ -548,5 +548,42 @@ export const LEVELS = [
         text: "napunsak"
       }
     ]
+  },
+  {
+    id: "58b9f552-90e3-4c12-a51a-2e56f5dae77c",
+    name: "New Level",
+    worldWidth: 4300,
+    worldHeight: 720,
+    floorY: 652,
+    playerSpawn: {
+      x: 272,
+      y: 604
+    },
+    platforms: [
+      {
+        x: 0,
+        y: 652,
+        width: 4300,
+        height: 64
+      },
+      {
+        x: 208,
+        y: 592,
+        width: 220,
+        height: 36
+      }
+    ],
+    coins: [],
+    hazards: [],
+    enemies: [],
+    challenges: [],
+    merchant: null,
+    exitGate: {
+      x: 304,
+      y: 448,
+      width: 116,
+      height: 140
+    },
+    signs: []
   }
 ];

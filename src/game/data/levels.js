@@ -482,81 +482,13 @@ export const LEVELS = [
     worldHeight: 720
   },
   {
-    id: "new-level",
-    name: "New Level",
+    id: "6a6f2e2f-baa2-4a26-b562-bdef3ec3b1b9",
+    name: "typical-tide-bar",
     worldWidth: 4300,
     worldHeight: 720,
     floorY: 652,
     playerSpawn: {
-      x: 624,
-      y: 448
-    },
-    platforms: [
-      {
-        x: 0,
-        y: 652,
-        width: 4300,
-        height: 64
-      }
-    ],
-    coins: [],
-    hazards: [],
-    enemies: [],
-    challenges: [],
-    merchant: null,
-    exitGate: {
-      x: 208,
-      y: 496,
-      width: 116,
-      height: 140
-    },
-    signs: []
-  },
-  {
-    id: "de939543-fcff-4ab1-a5dd-9433c3c2a16c",
-    name: "New Level",
-    worldWidth: 4300,
-    worldHeight: 720,
-    floorY: 652,
-    playerSpawn: {
-      x: 112,
-      y: 480
-    },
-    platforms: [
-      {
-        x: 0,
-        y: 652,
-        width: 4300,
-        height: 64
-      }
-    ],
-    coins: [],
-    hazards: [],
-    enemies: [],
-    challenges: [],
-    merchant: null,
-    exitGate: {
-      x: 512,
-      y: 496,
-      width: 116,
-      height: 140
-    },
-    signs: [
-      {
-        x: 192,
-        y: 336,
-        text: "napunsak"
-      }
-    ]
-  },
-  {
-    id: "58b9f552-90e3-4c12-a51a-2e56f5dae77c",
-    name: "New Level",
-    worldWidth: 4300,
-    worldHeight: 720,
-    floorY: 652,
-    playerSpawn: {
-      x: 272,
+      x: 368,
       y: 604
     },
     platforms: [
@@ -567,8 +499,8 @@ export const LEVELS = [
         height: 64
       },
       {
-        x: 208,
-        y: 592,
+        x: 192,
+        y: 128,
         width: 220,
         height: 36
       }
@@ -579,8 +511,8 @@ export const LEVELS = [
     challenges: [],
     merchant: null,
     exitGate: {
-      x: 304,
-      y: 448,
+      x: 384,
+      y: 512,
       width: 116,
       height: 140
     },

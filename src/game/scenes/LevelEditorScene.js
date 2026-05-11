@@ -1,4 +1,5 @@
 import { Check, ChevronDown, Group, Redo2, Trash2, Undo2, Ungroup } from "lucide";
+import { generate } from "random-words";
 import { LEVELS } from "../data/levels.js";
 import {
   getQuestionValidationMessage,
@@ -40,6 +41,13 @@ const COLORS = {
   playerSpawn: { fill: 0xf0f4df, stroke: 0xd7c96d },
   sign: { fill: 0x08100f, stroke: 0xe7d66b }
 };
+
+function generateLevelName() {
+  const name = generate({ exactly: 3, join: "-" });
+  return typeof name === "string" && /^[a-z]+-[a-z]+-[a-z]+$/.test(name)
+    ? name.toLowerCase()
+    : "new-level";
+}
 
 const ITEM_SIZES = {
   platform: { width: 220, height: 36 },
@@ -2165,7 +2173,7 @@ export class LevelEditorScene extends Phaser.Scene {
   createBlankLevel() {
     return {
       id: "new-level",
-      name: "New Level",
+      name: generateLevelName(),
       worldWidth: DEFAULT_WORLD_WIDTH,
       worldHeight: DEFAULT_WORLD_HEIGHT,
       floorY: DEFAULT_WORLD_HEIGHT - GROUND_HEIGHT - GROUND_BOTTOM_MARGIN,

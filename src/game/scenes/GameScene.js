@@ -25,6 +25,36 @@ const ITEM_SIZES = {
   playerSpawn: { width: 36, height: 48 }
 };
 
+const THEME = {
+  ink: 0x07100f,
+  void: 0x020807,
+  deep: 0x0b1714,
+  moss: 0x102019,
+  panel: 0x13281f,
+  trim: 0x385346,
+  teal: 0x3fa68f,
+  tealDeep: 0x1f6f61,
+  gold: 0xe7d66b,
+  goldBright: 0xfff3a6,
+  goldDeep: 0x9d7620,
+  parchment: 0xedf8ed,
+  danger: 0xd65f4f,
+  dangerBright: 0xffb0a6,
+  dangerDeep: 0x5d2020,
+  shadow: 0x010605
+};
+
+const THEME_CSS = {
+  ink: "#07100f",
+  panel: "#102019",
+  trim: "#385346",
+  teal: "#3fa68f",
+  gold: "#e7d66b",
+  goldBright: "#fff3a6",
+  parchment: "#edf8ed",
+  muted: "#9eaaa1"
+};
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
@@ -142,46 +172,85 @@ export class GameScene extends Phaser.Scene {
   createTextures() {
     const g = this.add.graphics();
 
-    g.fillStyle(0xf0f4df, 1);
-    g.fillRoundedRect(0, 0, 36, 48, 8);
-    g.fillStyle(0x18231d, 1);
-    g.fillRect(8, 10, 20, 8);
-    g.fillStyle(0xd7c96d, 1);
-    g.fillRect(22, 31, 9, 11);
+    g.fillStyle(THEME.teal, 0.24);
+    g.fillCircle(18, 25, 19);
+    g.fillStyle(THEME.panel, 1);
+    g.fillRoundedRect(7, 12, 22, 30, 7);
+    g.fillStyle(THEME.parchment, 1);
+    g.fillRoundedRect(10, 5, 16, 16, 8);
+    g.fillStyle(THEME.ink, 1);
+    g.fillRect(13, 11, 10, 3);
+    g.fillStyle(THEME.gold, 1);
+    g.fillTriangle(6, 15, 30, 15, 18, 29);
+    g.lineStyle(3, THEME.goldBright, 0.92);
+    g.strokeRoundedRect(8, 13, 20, 28, 6);
+    g.lineStyle(2, THEME.teal, 0.8);
+    g.strokeCircle(18, 25, 17);
     g.generateTexture("player", ITEM_SIZES.playerSpawn.width, ITEM_SIZES.playerSpawn.height);
     g.clear();
 
-    g.fillStyle(0xd8cd6c, 1);
+    g.fillStyle(THEME.gold, 0.34);
+    g.fillCircle(12, 12, 15);
+    g.fillStyle(THEME.goldDeep, 1);
     g.fillCircle(12, 12, 12);
-    g.lineStyle(3, 0xfff3a6, 1);
+    g.fillStyle(THEME.goldBright, 1);
+    g.fillCircle(9, 8, 4);
+    g.lineStyle(3, THEME.goldBright, 1);
     g.strokeCircle(12, 12, 8);
+    g.lineStyle(2, THEME.ink, 0.7);
+    g.strokeCircle(12, 12, 12);
     g.generateTexture("coin", 24, 24);
     g.clear();
 
-    g.fillStyle(0x17231d, 1);
-    g.fillRoundedRect(0, 0, 64, 36, 4);
-    g.fillStyle(0x2f4b3e, 1);
-    g.fillRect(0, 0, 64, 7);
-    g.lineStyle(2, 0xb9a44c, 0.65);
-    g.strokeRect(1, 1, 62, 34);
-    g.generateTexture("platform", 64, 36);
+    g.fillStyle(THEME.shadow, 0.45);
+    g.fillRoundedRect(3, 5, 90, 30, 4);
+    g.fillStyle(THEME.moss, 1);
+    g.fillRoundedRect(0, 0, 96, 32, 4);
+    g.fillStyle(THEME.panel, 1);
+    g.fillRect(0, 0, 96, 8);
+    g.fillStyle(THEME.tealDeep, 0.35);
+    g.fillRect(5, 12, 18, 4);
+    g.fillRect(34, 18, 24, 4);
+    g.fillRect(69, 12, 17, 4);
+    g.lineStyle(3, THEME.gold, 0.82);
+    g.strokeRoundedRect(1, 1, 94, 30, 4);
+    g.lineStyle(1, THEME.goldBright, 0.42);
+    g.strokeLineShape(new Phaser.Geom.Line(5, 7, 91, 7));
+    g.generateTexture("platform", 96, 36);
     g.clear();
 
-    g.fillStyle(0xd65f4f, 1);
+    g.fillStyle(THEME.danger, 0.25);
+    g.fillTriangle(0, 32, 18, -3, 36, 32);
+    g.fillStyle(THEME.dangerDeep, 1);
     g.fillTriangle(0, 32, 18, 0, 36, 32);
+    g.fillStyle(THEME.danger, 1);
+    g.fillTriangle(6, 32, 18, 6, 30, 32);
+    g.lineStyle(2, THEME.dangerBright, 0.86);
+    g.strokeTriangleShape(new Phaser.Geom.Triangle(0, 32, 18, 0, 36, 32));
+    g.lineStyle(1, THEME.ink, 0.72);
+    g.strokeLineShape(new Phaser.Geom.Line(18, 5, 18, 31));
     g.generateTexture("spike", ITEM_SIZES.hazard.width, ITEM_SIZES.hazard.height);
     g.clear();
 
-    g.fillStyle(0x2d7f6d, 1);
-    g.fillRoundedRect(0, 0, 40, 40, 6);
-    g.fillStyle(0xe7d66b, 1);
-    g.fillRect(9, 12, 22, 7);
+    g.fillStyle(THEME.teal, 0.2);
+    g.fillCircle(20, 20, 22);
+    g.fillStyle(THEME.tealDeep, 1);
+    g.fillRoundedRect(4, 4, 32, 32, 7);
+    g.fillStyle(THEME.panel, 1);
+    g.fillRoundedRect(9, 10, 22, 14, 3);
+    g.fillStyle(THEME.gold, 1);
+    g.fillRect(12, 14, 5, 4);
+    g.fillRect(23, 14, 5, 4);
+    g.lineStyle(3, THEME.gold, 0.75);
+    g.strokeRoundedRect(4, 4, 32, 32, 7);
+    g.lineStyle(2, THEME.teal, 0.7);
+    g.strokeCircle(20, 20, 18);
     g.generateTexture("enemy", ITEM_SIZES.enemy.width, ITEM_SIZES.enemy.height);
     g.destroy();
   }
 
   createWorld() {
-    this.add.rectangle(this.worldWidth / 2, this.worldHeight / 2, this.worldWidth, this.worldHeight, 0x07100f);
+    this.add.rectangle(this.worldWidth / 2, this.worldHeight / 2, this.worldWidth, this.worldHeight, THEME.ink);
     this.drawParallaxBands();
 
     this.platforms = this.physics.add.staticGroup();
@@ -197,17 +266,44 @@ export class GameScene extends Phaser.Scene {
   drawParallaxBands() {
     const graphics = this.add.graphics();
     const bandY = Math.max(0, this.floorY - 144);
-    graphics.fillStyle(0x0f1a18, 1);
-    graphics.fillRect(0, bandY, this.worldWidth, 144);
-    graphics.fillStyle(0x16251f, 1);
-    for (let x = 0; x < this.worldWidth; x += 180) {
-      const height = 80 + ((x / 180) % 4) * 34;
-      graphics.fillRect(x, bandY - height, 92, height);
-      graphics.fillRect(x + 110, bandY - height * 0.7, 54, height * 0.7);
+    graphics.setDepth(-10);
+    graphics.fillStyle(THEME.void, 1);
+    graphics.fillRect(0, 0, this.worldWidth, this.worldHeight);
+    graphics.fillStyle(THEME.deep, 1);
+    graphics.fillRect(0, bandY - 48, this.worldWidth, 192);
+    graphics.fillStyle(THEME.moss, 1);
+    graphics.fillRect(0, bandY, this.worldWidth, this.worldHeight - bandY);
+
+    graphics.lineStyle(1, THEME.teal, 0.09);
+    for (let x = 0; x < this.worldWidth; x += 64) {
+      graphics.strokeLineShape(new Phaser.Geom.Line(x, 0, x, this.worldHeight));
     }
-    graphics.lineStyle(2, 0x385346, 0.45);
-    for (let x = 0; x < this.worldWidth; x += 120) {
-      graphics.strokeLineShape(new Phaser.Geom.Line(x, bandY + 2, x + 90, bandY - 38));
+    for (let y = 56; y < this.worldHeight; y += 56) {
+      graphics.strokeLineShape(new Phaser.Geom.Line(0, y, this.worldWidth, y));
+    }
+
+    graphics.fillStyle(THEME.panel, 0.74);
+    for (let x = 0; x < this.worldWidth; x += 230) {
+      const height = 88 + ((x / 230) % 5) * 28;
+      graphics.fillRect(x, bandY - height, 104, height);
+      graphics.fillRect(x + 132, bandY - height * 0.68, 62, height * 0.68);
+      graphics.fillStyle(THEME.goldDeep, 0.18);
+      graphics.fillRect(x + 12, bandY - height + 18, 34, 5);
+      graphics.fillRect(x + 146, bandY - height * 0.68 + 18, 22, 5);
+      graphics.fillStyle(THEME.panel, 0.74);
+    }
+
+    graphics.lineStyle(2, THEME.trim, 0.44);
+    for (let x = 0; x < this.worldWidth; x += 118) {
+      graphics.strokeLineShape(new Phaser.Geom.Line(x, bandY + 4, x + 86, bandY - 38));
+    }
+
+    graphics.lineStyle(3, THEME.gold, 0.15);
+    graphics.strokeLineShape(new Phaser.Geom.Line(0, bandY - 1, this.worldWidth, bandY - 1));
+    graphics.lineStyle(1, THEME.goldBright, 0.08);
+    for (let x = 40; x < this.worldWidth; x += 420) {
+      graphics.strokeCircle(x, bandY - 88, 28);
+      graphics.strokeCircle(x, bandY - 88, 45);
     }
   }
 
@@ -278,8 +374,9 @@ export class GameScene extends Phaser.Scene {
       const center = this.centerFromTopLeft("challenge", pos);
       const size = this.itemSize("challenge", pos);
       const zone = this.add
-        .rectangle(center.x, center.y, size.width, size.height, 0x2d7f6d, 0.22)
-        .setStrokeStyle(3, 0xd8cd6c, 0.85);
+        .rectangle(center.x, center.y, size.width, size.height, THEME.teal, 0.16)
+        .setStrokeStyle(3, THEME.gold, 0.9);
+      zone.setDepth(12);
       this.physics.add.existing(zone, true);
       zone.setData("id", index);
       zone.setData("locked", false);
@@ -287,9 +384,65 @@ export class GameScene extends Phaser.Scene {
       zone.setData("question", this.resolveChallengeQuestion(pos, index, questionLevels));
       this.challengeZones.push(zone);
 
-      this.add.text(pos.x, pos.y - 28, pos.label || `CHALLENGE ${String(index + 1).padStart(2, "0")}`, this.signStyle()).setDepth(3);
+      this.drawChallengeShrine(center, size);
+      this.add.text(pos.x, pos.y - 28, pos.label || `CHALLENGE ${String(index + 1).padStart(2, "0")}`, this.signStyle()).setDepth(18);
       this.physics.add.overlap(this.player, zone, () => this.tryStartChallenge(zone));
     });
+  }
+
+  drawChallengeShrine(center, size) {
+    const graphics = this.add.graphics().setDepth(11);
+    const x = center.x - size.width / 2;
+    const y = center.y - size.height / 2;
+    graphics.fillStyle(THEME.teal, 0.08);
+    graphics.fillRoundedRect(x - 12, y - 14, size.width + 24, size.height + 28, 12);
+    graphics.lineStyle(2, THEME.teal, 0.5);
+    graphics.strokeRoundedRect(x - 8, y - 10, size.width + 16, size.height + 20, 10);
+    graphics.lineStyle(3, THEME.gold, 0.74);
+    graphics.strokeRoundedRect(x + 8, y + 8, size.width - 16, size.height - 16, 8);
+    graphics.fillStyle(THEME.goldBright, 0.12);
+    graphics.fillCircle(center.x, y + 18, 22);
+    graphics.lineStyle(2, THEME.goldBright, 0.35);
+    graphics.strokeCircle(center.x, y + 18, 34);
+  }
+
+  drawMerchantStall(merchant, center, size) {
+    const graphics = this.add.graphics().setDepth(10);
+    const left = center.x - size.width / 2;
+    const top = center.y - size.height / 2;
+    graphics.fillStyle(THEME.panel, 0.82);
+    graphics.fillRoundedRect(left + 12, top + 38, size.width - 24, size.height - 42, 8);
+    graphics.fillStyle(THEME.goldDeep, 0.92);
+    graphics.fillTriangle(left + 8, top + 42, center.x, top + 4, left + size.width - 8, top + 42);
+    graphics.lineStyle(3, THEME.gold, 0.86);
+    graphics.strokeTriangleShape(new Phaser.Geom.Triangle(left + 8, top + 42, center.x, top + 4, left + size.width - 8, top + 42));
+    graphics.lineStyle(2, THEME.teal, 0.5);
+    graphics.strokeRoundedRect(left + 12, top + 38, size.width - 24, size.height - 42, 8);
+    const npcX = merchant.npcX || center.x;
+    const npcY = merchant.npcY || center.y;
+    graphics.fillStyle(THEME.teal, 1);
+    graphics.fillCircle(npcX, npcY - 18, 12);
+    graphics.fillStyle(THEME.moss, 1);
+    graphics.fillRoundedRect(npcX - 16, npcY - 8, 32, 34, 6);
+    graphics.lineStyle(2, THEME.goldBright, 0.8);
+    graphics.strokeCircle(npcX, npcY - 18, 15);
+  }
+
+  drawExitGate(center, size) {
+    const graphics = this.add.graphics().setDepth(10);
+    const left = center.x - size.width / 2;
+    const top = center.y - size.height / 2;
+    graphics.fillStyle(THEME.gold, 0.1);
+    graphics.fillRoundedRect(left - 12, top - 12, size.width + 24, size.height + 24, 16);
+    graphics.fillStyle(THEME.panel, 0.86);
+    graphics.fillRoundedRect(left + 8, top + 8, size.width - 16, size.height - 8, 8);
+    graphics.fillStyle(THEME.goldDeep, 0.42);
+    graphics.fillRoundedRect(left + 28, top + 28, size.width - 56, size.height - 42, 6);
+    graphics.lineStyle(5, THEME.gold, 0.92);
+    graphics.strokeRoundedRect(left + 8, top + 8, size.width - 16, size.height - 8, 8);
+    graphics.lineStyle(2, THEME.goldBright, 0.55);
+    graphics.strokeCircle(center.x, top + 28, 26);
+    graphics.strokeLineShape(new Phaser.Geom.Line(center.x, top + 54, center.x, top + size.height - 12));
   }
 
   createMerchant() {
@@ -301,7 +454,11 @@ export class GameScene extends Phaser.Scene {
 
     const center = this.centerFromTopLeft("merchant", merchant);
     const size = this.itemSize("merchant", merchant);
-    this.merchantZone = this.add.rectangle(center.x, center.y, size.width, size.height, 0x345347, 0.25).setStrokeStyle(3, 0xe7d66b);
+    this.drawMerchantStall(merchant, center, size);
+    this.merchantZone = this.add
+      .rectangle(center.x, center.y, size.width, size.height, THEME.tealDeep, 0.18)
+      .setStrokeStyle(3, THEME.gold, 0.9)
+      .setDepth(12);
     this.physics.add.existing(this.merchantZone, true);
     this.physics.add.overlap(this.player, this.merchantZone, () => {
       this.nearMerchant = true;
@@ -322,7 +479,11 @@ export class GameScene extends Phaser.Scene {
 
     const center = this.centerFromTopLeft("exitGate", gate);
     const size = this.itemSize("exitGate", gate);
-    this.exitGate = this.add.rectangle(center.x, center.y, size.width, size.height, 0x8a7440, 0.58).setStrokeStyle(4, 0xe7d66b);
+    this.drawExitGate(center, size);
+    this.exitGate = this.add
+      .rectangle(center.x, center.y, size.width, size.height, THEME.goldDeep, 0.24)
+      .setStrokeStyle(4, THEME.goldBright, 0.92)
+      .setDepth(12);
     this.physics.add.existing(this.exitGate, true);
     this.physics.add.overlap(this.player, this.exitGate, () => {
       this.nearExit = true;
@@ -600,24 +761,26 @@ export class GameScene extends Phaser.Scene {
     const uiItems = [];
 
     const panel = this.add.container(0, 0).setScrollFactor(0).setDepth(70);
-    panel.add(this.add.rectangle(640, 118, 1110, 178, 0x08100f, 0.94).setStrokeStyle(3, 0xe7d66b));
+    panel.add(this.add.rectangle(640, 118, 1110, 178, THEME.ink, 0.95).setStrokeStyle(3, THEME.gold));
+    panel.add(this.add.rectangle(640, 40, 1030, 4, THEME.teal, 0.45));
+    panel.add(this.add.rectangle(640, 196, 1030, 4, THEME.gold, 0.36));
     panel.add(this.add.text(110, 48, question.prompt, {
       fontFamily: "Cascadia Mono, Consolas, monospace",
       fontSize: "24px",
-      color: "#edf8ed",
+      color: THEME_CSS.parchment,
       wordWrap: { width: 760 }
     }));
     const timerText = this.add.text(1010, 50, "", {
       fontFamily: "Cascadia Mono, Consolas, monospace",
       fontSize: "28px",
-      color: "#e7d66b"
+      color: THEME_CSS.gold
     });
     panel.add(timerText);
     panel.setAlpha(0);
     panel.y = -18;
 
     question.options.forEach((option, index) => {
-      const door = this.add.rectangle(baseX + index * 105, doorY, 78, 112, 0x18231d, 0.92).setStrokeStyle(4, 0xe7d66b);
+      const door = this.add.rectangle(baseX + index * 105, doorY, 78, 112, THEME.moss, 0.94).setStrokeStyle(4, THEME.gold);
       this.physics.add.existing(door, true);
       door.setData("answer", index);
       door.setDepth(25);
@@ -629,19 +792,19 @@ export class GameScene extends Phaser.Scene {
       const letter = String.fromCharCode(65 + index);
       const optionX = 112 + (index % 2) * 450;
       const optionY = 104 + Math.floor(index / 2) * 44;
-      panel.add(this.add.rectangle(optionX + 205, optionY + 15, 410, 32, 0x13201b, 1).setStrokeStyle(1, 0x3f5d4f));
+      panel.add(this.add.rectangle(optionX + 205, optionY + 15, 410, 32, THEME.panel, 1).setStrokeStyle(1, THEME.trim));
       panel.add(this.add.text(optionX, optionY, `${letter}: ${option}`, {
         fontFamily: "Cascadia Mono, Consolas, monospace",
         fontSize: "15px",
-        color: "#edf8ed",
+        color: THEME_CSS.parchment,
         wordWrap: { width: 390 }
       }));
 
       const label = this.add.text(door.x - 21, door.y - 80, letter, {
         fontFamily: "EdgecaseTitle, Bahnschrift, Impact",
         fontSize: "38px",
-        color: "#e7d66b",
-        stroke: "#08100f",
+        color: THEME_CSS.gold,
+        stroke: THEME_CSS.ink,
         strokeThickness: 4
       }).setDepth(26);
       label.setAlpha(0);
@@ -679,8 +842,8 @@ export class GameScene extends Phaser.Scene {
         selectedAnswer = door.getData("answer");
       }
 
-      door.setFillStyle(isSelected ? 0x35594b : 0x18231d, isSelected ? 1 : 0.92);
-      door.setStrokeStyle(isSelected ? 5 : 4, isSelected ? 0xf4e786 : 0xe7d66b);
+      door.setFillStyle(isSelected ? THEME.tealDeep : THEME.moss, isSelected ? 1 : 0.94);
+      door.setStrokeStyle(isSelected ? 5 : 4, isSelected ? THEME.goldBright : THEME.gold);
     }
 
     this.quiz.selectedAnswer = selectedAnswer;
@@ -763,8 +926,8 @@ export class GameScene extends Phaser.Scene {
       const earned = Math.round((this.tuning.reward + speedBonus) * multiplier);
       this.answerStreak += 1;
       zone.setData("completed", true);
-      zone.setFillStyle(0x3fa68f, 0.14);
-      zone.setStrokeStyle(3, 0x3fa68f, 0.65);
+      zone.setFillStyle(THEME.teal, 0.14);
+      zone.setStrokeStyle(3, THEME.teal, 0.65);
 
       this.coins += earned;
       this.showToast(`Correct: +${earned}`);
@@ -773,8 +936,8 @@ export class GameScene extends Phaser.Scene {
       this.answerStreak = 0;
       this.coins = Math.max(0, this.coins - 5);
       zone.setData("locked", true);
-      zone.setFillStyle(0x5d2020, 0.2);
-      zone.setStrokeStyle(3, 0xd65f4f, 0.8);
+      zone.setFillStyle(THEME.dangerDeep, 0.2);
+      zone.setStrokeStyle(3, THEME.danger, 0.8);
       this.addPenaltyHazard(zone.x + 120);
       this.showToast(`${reason}: zone locked, -5 coins`);
       this.playTone(reason === "Timeout" ? "timeout" : "wrong");
@@ -1301,11 +1464,18 @@ export class GameScene extends Phaser.Scene {
 
   signStyle() {
     return {
-      fontFamily: "Cascadia Mono, Consolas, monospace",
-      fontSize: "15px",
-      color: "#e7d66b",
-      backgroundColor: "#08100f",
-      padding: { x: 7, y: 5 }
+      fontFamily: "Bungee, EdgecaseTitle, Bahnschrift, Impact, sans-serif",
+      fontSize: "14px",
+      color: THEME_CSS.gold,
+      backgroundColor: THEME_CSS.ink,
+      padding: { x: 8, y: 6 },
+      shadow: {
+        offsetX: 0,
+        offsetY: 0,
+        color: THEME_CSS.goldBright,
+        blur: 6,
+        fill: true
+      }
     };
   }
 
